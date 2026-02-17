@@ -354,7 +354,7 @@ def main(args=None):
         action="store_true",
         help="Enable debugging mode (default: False)",
     )
-    parsed_args = parser.parse_args(args)
+    parsed_args, _ = parser.parse_known_args(args)
 
     rclpy.init(args=args)
     node = OculusNode(debug=parsed_args.debug)
