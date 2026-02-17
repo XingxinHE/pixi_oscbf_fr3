@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """ROS2 node for publishing desired end-effector states from an example trajectory"""
 
 import numpy as np
@@ -10,10 +11,10 @@ from rclpy.qos import (
     HistoryPolicy,
     DurabilityPolicy,
 )
-from oscbf_msgs.msg import EEState
+from oscbf_control_msgs.msg import EEState
 from geometry_msgs.msg import Point, Quaternion, Vector3
 
-from oscbf_hardware_python.utils.trajectory import SinusoidalTaskTrajectory
+from oscbf_control.utils.trajectory import SinusoidalTaskTrajectory
 
 
 class EETrajNode(Node):

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Oculus ROS2 Node for teleoperating a robot (Franka Panda) with operational space control"""
 
 from typing import Tuple
@@ -18,12 +19,12 @@ from rclpy.qos import (
     HistoryPolicy,
     DurabilityPolicy,
 )
-from oscbf_msgs.msg import EEState
+from oscbf_control_msgs.msg import EEState
 from geometry_msgs.msg import Point, Quaternion, Vector3
 from sensor_msgs.msg import JointState
 
 from oscbf.core.manipulator import load_panda, Manipulator, tuplify
-from oscbf_hardware_python.utils.rotations_and_transforms import (
+from oscbf_control.utils.rotations_and_transforms import (
     invert_transform_numpy,
     Rx,
     Rz,

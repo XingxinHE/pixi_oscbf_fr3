@@ -14,7 +14,7 @@ from rclpy.qos import (
     HistoryPolicy,
     DurabilityPolicy,
 )
-from oscbf_msgs.msg import EEState
+from oscbf_control_msgs.msg import EEState
 
 
 class EEStateVisualizer(Node):
