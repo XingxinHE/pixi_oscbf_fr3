@@ -1,0 +1,48 @@
+[workspace]
+authors = ["Xingxin HE <xingxin.he@connect.ust.hk>"]
+channels = ["robostack-humble", "conda-forge"]
+name = "pixi_oscbf_fr3"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[activation]
+scripts = ["scripts/set_ros_env.sh", "install/setup.bash"]
+
+[dependencies]
+python = ">=3.11,<3.12"
+colcon-common-extensions = "*"
+ros-humble-desktop = "*"
+ros-humble-rmw-zenoh-cpp = "*"
+ros-humble-ros2-control = "*"
+ros-humble-ros2-controllers = "*"
+numpy = "<2"
+libstdcxx-ng = ">=12.2.0"
+compilers = "*"
+cmake = ">=3.26,<4"
+pkg-config = "*"
+make = "*"
+ninja = "*"
+
+[target.linux.dependencies]
+libgl-devel = "*"
+
+[pypi-dependencies]
+oscbf = { git = "https://github.com/StanfordASL/oscbf.git", rev = "6082329f8e1d61ee8e875a63a5cd80a14d513e12" }
+
+[tasks]
+build = "bash scripts/build.sh"
+clean = "bash scripts/clean.sh"
+kill-zombies = "bash scripts/kill_zombies.sh"
+
+franka-node = "ros2 run oscbf_control franka_impedance_controller"
+cbf-node = "ros2 run oscbf_control franka_control_node.py"
+bridge-node = "ros2 run crisp_oscbf_bridge crisp_bridge_node.py"
+traj-node = "ros2 run oscbf_control traj_node.py"
+oculus-node = "ros2 run oscbf_control oculus_node.py"
+
+traj-sim = "ros2 launch oscbf_control traj_sim.launch.py"
+teleop-hardware = "ros2 launch oscbf_control teleop_hardware.launch.py"
+teleop-fr3-cbf = "ros2 launch oscbf_control fr3_cbf_teleop.launch.py launch_franka_node:=false"
+teleop-fr3-cbf-all = "ros2 launch oscbf_control fr3_cbf_teleop.launch.py launch_franka_node:=true"
+teleop-fr3-cbf-dual = "ros2 launch oscbf_control fr3_dual_cbf_teleop.launch.py launch_franka_node:=false"
+teleop-fr3-cbf-dual-all = "ros2 launch oscbf_control fr3_dual_cbf_teleop.launch.py launch_franka_node:=true"

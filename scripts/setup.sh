@@ -1,20 +1,16 @@
-#!/bin/bash
-#
-# This script configures the environment (ROS2 + python venv)
+#!/usr/bin/env bash
+set -euo pipefail
 
-WS_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-VENV_DIR="$WS_ROOT/.venv"
+WS_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ ! -d "$VENV_DIR" ]]; then
-  echo "ERROR: Could not find the virtual env"
-  echo "Check that you've set up the venv with UV"
-  exit 1
+export ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-100}"
+export RMW_IMPLEMENTATION="${RMW_IMPLEMENTATION:-rmw_zenoh_cpp}"
+echo "Using ROS_DOMAIN_ID=${ROS_DOMAIN_ID}"
+echo "Using RMW_IMPLEMENTATION=${RMW_IMPLEMENTATION}"
+
+if [[ -f "${WS_ROOT}/install/setup.bash" ]]; then
+  source "${WS_ROOT}/install/setup.bash"
+  echo "✓ Workspace overlay sourced"
+else
+  echo "WARN: install/setup.bash not found. Run 'pixi run build' first."
 fi
-
-export ROS_DOMAIN_ID=10
-echo "Using ROS_DOMAIN_ID=$ROS_DOMAIN_ID"
-
-cd "$WS_ROOT"
-source "$WS_ROOT/.venv/bin/activate"
-source install/setup.bash
-echo "✓ Environment configured"

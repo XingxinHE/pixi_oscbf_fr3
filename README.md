@@ -1,151 +1,121 @@
-# OSCBF ROS2 Workspace
+# pixi_oscbf_fr3
 
-[![Paper](http://img.shields.io/badge/arXiv-2503.06736-B31B1B.svg)](https://arxiv.org/abs/2503.06736)
+RT-side OSCBF control workspace for FR3 experiments.
 
-Fast, safe manipulator teleoperation with [OSCBF](https://github.com/StanfordASL/oscbf)
+This repo is a Pixi-managed ROS2 workspace based on `oscbf_hardware_ws`, with an added
+`crisp_oscbf_bridge` package to connect CRISP teleop topics to OSCBF control topics.
 
-Currently supported hardware platforms:
-- Franka Emika Panda
+## What this workspace does
 
-## Installation
+Runtime nodes in the FR3 CBF mode:
 
-### Libfranka
+1. `franka_impedance_controller` (C++):
+   - subscribes `franka/torque_command`
+   - publishes `franka/joint_states`
+2. `franka_control_node.py` (Python):
+   - subscribes `franka/joint_states`, `ee_state`
+   - publishes `franka/torque_command`
+3. `crisp_bridge_node.py` (Python, new):
+   - subscribes `target_pose`, `franka/joint_states`
+   - publishes `ee_state`, `current_pose`, `current_twist`, `joint_states`
 
-For newer robots, you can probably follow the standard setup details on the [libfranka Github](https://github.com/frankarobotics/libfranka). However, our lab has an older Panda, which requires libfranka 0.8.0. To get this to work, I had to make a minor change to libfranka which is available [here](https://github.com/danielpmorton/libfranka_08_patch).
+This lets existing CRISP teleop frontends keep publishing `target_pose` while OSCBF owns the
+low-level torque loop.
 
-### Fetch the code
+## Important safety and ownership rule
 
-Clone the original oscbf code and the ROS2 workspace. See the README on the [OSCBF Github](https://github.com/StanfordASL/oscbf) for additional details
-```
-git clone https://github.com/StanfordASL/oscbf
-git clone https://github.com/StanfordASL/oscbf_hardware_ws/
-```
+Do **not** run `module_run_on_RT_pc/pixi_franka_ros2` robot control launch and OSCBF hardware
+control at the same time for the same robot.
 
-### Set up your virtual environment
+Pick exactly one robot owner.
 
-If using a virtual environment, keep in mind that while the OSCBF code runs on multiple python versions (tested: 3.10, 3.11, 3.12), to get it to work with ROS2, you'll need the python version to match with your ROS2 python version. For ROS2 Humble, this means 3.10.x, and for ROS2 Jazzy, this means 3.12.x. 
+## Setup
 
-I recommend `uv` to manage the virtual environment. If you don't have `uv` already installed, run the following:
-```
-curl -LsSf https://astral.sh/uv/install.sh | sh
-# Optional, but recommended:
-# echo 'eval "$(uv generate-shell-completion bash)"' >> ~/.bashrc
-```
-Then create the virtual environment for the project and install dependencies
-```
-cd oscbf_hardware_ws
-uv venv --python 3.12.3 --system-site-packages
-# Or, feel free to select a different python version.
-# If you intend to use ROS2 Humble, I recommend 3.10.12
-source .venv/bin/activate
-# Note: this assumes you cloned oscbf and oscbf_hardware_ws in the same directory
-cd ../oscbf
-uv pip install -e .
+```bash
+cd module_run_on_RT_pc/pixi_oscbf_fr3
+pixi install
+pixi run build
 ```
 
-### Oculus Reader
+If build output says `Franka package not found. Skipping franka_impedance_controller build`,
+simulation and bridge nodes are still available, but hardware torque node is not built in this workspace.
 
-If using the Oculus, follow the steps as found on the [oculus_reader github page](https://github.com/rail-berkeley/oculus_reader). Then, install the package in your environment with
-```
-source oscbf_hardware_ws/.venv/bin/activate
-cd oculus_reader # Wherever you cloned it
-uv pip install -e .
-```
+If needed, source overlays manually in the current shell:
 
-When working with the Oculus/Quest hardware, the following tips might be useful:
-- Go into settings and turn all of the automatic sleep times to the maximum value (4 hours)
-- Add a sticker on top of the proximity sensor on the inside of the headset
-- The Meta Quest 3 sometimes has some issues where it loses track of the controller, and then when it regains tracking, it "snaps" to the new location, leading to unstable robot control. The Quest 2 seems to be more stable here.
-
-### Build + Setup
-
-To build, run
-```
-./scripts/build.sh
-```
-To configure your terminal/environment, run
-```
+```bash
 source scripts/setup.sh
 ```
 
-## Demo (ROS-free)
+## Main tasks
 
-There are many interactive demos available in the original OSCBF repo! Give these a try and make sure that things work before trying to run the ROS2 nodes.
+```bash
+pixi run traj-sim
+pixi run teleop-hardware
+pixi run teleop-fr3-cbf
+pixi run teleop-fr3-cbf-all
+pixi run teleop-fr3-cbf-dual
+pixi run teleop-fr3-cbf-dual-all
 
-## ROS Demo
-
-For a ROS2 end-effector trajectory tracking demo in sim,
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 launch oscbf_control traj_sim.launch.py
-```
-
-## Overview
-
-This contains two packages:
-
-1. `oscbf_control`: Control nodes (Python and C++)
-3. `oscbf_control_msgs`: Custom ROS2 message definitions
-
-## Terminal setup -- Hardware teleoperation example
-
-This is how to configure your terminals if you are running individual nodes. But, a launch file can also be used to run multiple nodes at once.
-
-**Terminal 1 (Franka node)**: Publishes joint states, subscribes to joint torques
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 run oscbf_control franka_impedance_controller
+pixi run franka-node
+pixi run cbf-node
+pixi run bridge-node
+pixi run traj-node
+pixi run oculus-node
 ```
 
-**Terminal 2 (OSCBF node)**: Publishes joint torques, subscribes to joint states and desired EE state
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 run oscbf_control franka_control_node.py
-```
+`teleop-fr3-cbf` launches CBF + bridge only (expects a separate Franka torque node).
+`teleop-fr3-cbf-all` also launches `franka_impedance_controller` from this workspace.
+`teleop-fr3-cbf-dual` launches leader + follower CBF/bridge stacks (no local torque nodes).
+`teleop-fr3-cbf-dual-all` also launches two `franka_impedance_controller` nodes.
 
-**Terminal 3 (Oculus node)**: Publishes desired EE state, subscribes to joint states
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 run oscbf_control oculus_node.py
-```
+## Recommended first hardware experiment (single FR3)
 
-### Alternative terminal setup options
+1. On RT PC, run CBF stack:
 
-#### Trajectory following
-
-Terminal 3 can be replaced with a trajectory node, which publishes just the desired EE state from a predefined EE trajectory
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 run oscbf_control traj_node.py
+```bash
+pixi run teleop-fr3-cbf-all -- --robot_hostname 172.16.0.3
 ```
 
-#### Testing in simulation
+2. On operator/GPU side, run your existing teleop workflow (for example gamepad):
 
-Terminal 1 can be replaced with a simulated pybullet environment which does not require a connection to the robot, and can be used to debug the controller prior to testing on hardware
-```
-cd oscbf_hardware_ws
-source scripts/setup.sh
-ros2 run oscbf_control pybullet_sim_node.py
+```bash
+cd /home/hex/Documents/github/playground/understand_crisp/robofab_crisp
+pixi run teleop-gamepad-fr3-3cams
 ```
 
-## Assorted notes
+The bridge should expose `current_pose/current_twist/joint_states` and consume `target_pose`.
 
-- Connect to the Franka control box via ethernet
-- Make sure that the ethernet profile is configured to Franka (see the Setting Up the Network section of [Franka FCI documentation](https://frankarobotics.github.io/docs/getting_started.html) if this is not already configured)
-- Make sure that the robot joints are unlocked (accessed via the [Franka Desk](https://172.16.0.2/desk/)) and that the emergency stop button is not depressed. The robot should be in the blue light mode to begin accepting commands over FCI. This code also currently assumes that the Franka hand is attached.
-- If the Franka node (Terminal 1) reports an error like `Move command rejected: command not possible in the current mode!`, depress and release the emergency stop to reset the mode. The robot should return to the blue light state and you can re-run the command
+## Namespace usage (dual-arm follower experiment)
+
+To run follower as `right` namespace:
+
+```bash
+pixi run teleop-fr3-cbf -- --namespace right --robot_hostname 172.16.0.3
+```
+
+Then CRISP side should target right-namespaced env configs (`--follower-namespace right`, etc.).
+
+To launch both leader and follower OSCBF stacks from this workspace:
+
+```bash
+pixi run teleop-fr3-cbf-dual -- --leader_namespace left --follower_namespace right --leader_robot_hostname 172.16.0.33 --follower_robot_hostname 172.16.0.3
+```
+
+## Current limitations
+
+- Upstream OSCBF hardware scripts currently use `load_panda()` model assumptions.
+- FR3-specific model/collision tuning is a follow-up task for production safety validation.
+- Gripper control is still outside OSCBF torque loop and remains separate.
 
 ## Citation
-```
+
+If you use OSCBF in publications, please cite:
+
+```text
 @inproceedings{morton2025oscbf,
   author={Morton, Daniel and Pavone, Marco},
-  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, 
-  title={Safe, Task-Consistent Manipulation with Operational Space Control Barrier Functions}, 
+  booktitle={2025 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)},
+  title={Safe, Task-Consistent Manipulation with Operational Space Control Barrier Functions},
   year={2025},
   pages={187-194},
   doi={10.1109/IROS60139.2025.11246389}

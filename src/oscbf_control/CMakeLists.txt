@@ -18,36 +18,44 @@ find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(Eigen3 REQUIRED)
-find_package(Franka REQUIRED)
 find_package(oscbf_control_msgs REQUIRED)
+
+option(BUILD_FRANKA_HARDWARE_NODE "Build franka_impedance_controller hardware node" ON)
+if(BUILD_FRANKA_HARDWARE_NODE)
+  find_package(Franka QUIET)
+endif()
 
 # Install Python package code
 # The Python package directory is named oscbf_control
 ament_python_install_package(${PROJECT_NAME})
 
-# C++ Executables
-add_executable(franka_impedance_controller src/franka_impedance_controller.cpp)
+if(BUILD_FRANKA_HARDWARE_NODE AND Franka_FOUND)
+  # C++ Executables
+  add_executable(franka_impedance_controller src/franka_impedance_controller.cpp)
 
-target_include_directories(franka_impedance_controller PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
-  ${EIGEN3_INCLUDE_DIRS}
-)
+  target_include_directories(franka_impedance_controller PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+    ${EIGEN3_INCLUDE_DIRS}
+  )
 
-target_link_libraries(franka_impedance_controller
-  franka
-)
+  target_link_libraries(franka_impedance_controller
+    franka
+  )
 
-ament_target_dependencies(franka_impedance_controller
-  rclcpp
-  sensor_msgs
-  std_msgs
-  oscbf_control_msgs
-)
+  ament_target_dependencies(franka_impedance_controller
+    rclcpp
+    sensor_msgs
+    std_msgs
+    oscbf_control_msgs
+  )
 
-# Install C++ targets
-install(TARGETS franka_impedance_controller
-  DESTINATION lib/${PROJECT_NAME})
+  # Install C++ targets
+  install(TARGETS franka_impedance_controller
+    DESTINATION lib/${PROJECT_NAME})
+elseif(BUILD_FRANKA_HARDWARE_NODE)
+  message(WARNING "Franka package not found. Skipping franka_impedance_controller build.")
+endif()
 
 # Install Python nodes from scripts directory
 install(PROGRAMS

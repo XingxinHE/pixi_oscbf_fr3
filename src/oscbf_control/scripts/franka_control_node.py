@@ -33,9 +33,10 @@ from sensor_msgs.msg import JointState
 from oscbf_control_msgs.msg import EEState
 
 from oscbf_control.utils.rotations_and_transforms import xyzw_to_rotation_numpy
-from oscbf.core.manipulator import Manipulator, load_panda
+from oscbf.core.manipulator import Manipulator
 from oscbf.core.oscbf_configs import OSCBFTorqueConfig
 from oscbf.core.controllers import PoseTaskTorqueController
+from oscbf_control.utils.robot_loader import load_robot_model
 
 jax.config.update("jax_enable_x64", True)
 
@@ -180,6 +181,7 @@ class OSCBFNode(Node):
     ):
         super().__init__("oscbf_node")
         self.get_logger().info("Initializing OSCBF Node...")
+        self.declare_parameter("robot_model", "fr3")
         whole_body_pos_min = np.asarray(whole_body_pos_min)
         whole_body_pos_max = np.asarray(whole_body_pos_max)
         assert whole_body_pos_min.shape == (3,)
@@ -215,7 +217,9 @@ class OSCBFNode(Node):
         self.last_ee_state = None
 
         self.get_logger().info("Loading Franka model...")
-        self.robot = load_panda()
+        self.robot = load_robot_model(
+            str(self.get_parameter("robot_model").value), self.get_logger()
+        )
 
         self.get_logger().info("Creating CBF...")
         self.cbf_config = DemoConfig(self.robot, whole_body_pos_min, whole_body_pos_max)

@@ -19,6 +19,8 @@ __pycache__
 venv/
 env/
 
+# Pixi env cache
+.pixi/
+
 # Editors
 .vscode/
-
